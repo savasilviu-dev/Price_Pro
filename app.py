@@ -13,40 +13,30 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* Fundal general si tipografie */
-    .stApp { background-color: #FAFAFA; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    /* Forțăm fundalul paginii și textul să fie cele definite de noi, ignorând Dark Mode-ul browserului */
+    .stApp { 
+        background-color: #FAFAFA !important; 
+        color: #333333 !important; 
+    }
     
-    /* Casete explicative (Varianta B - Ghidaje) */
+    /* Asigurăm că toate containerele de text respectă tema noastră */
+    div[data-testid="stAppViewContainer"] {
+        background-color: #FAFAFA !important;
+    }
+    
     .explaining-note {
-        background-color: #FFF2F6;
-        border-left: 4px solid #D11A5B;
+        background-color: #FFF2F6 !important;
+        border-left: 4px solid #D11A5B !important;
         padding: 10px 14px;
-        border-radius: 0px 8px 8px 0px;
-        margin-top: -12px;
-        margin-bottom: 20px;
+        color: #333333 !important;
         font-size: 0.85rem;
-        color: #4A4A4A;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.02);
     }
     
-    /* Design panouri metrice */
-    div[data-testid="metric-container"] {
-        background-color: #FFFFFF;
-        border: 1px solid #EAEAEA;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-        border-top: 4px solid #D11A5B;
-    }
-    
-    /* Stiluri Butoane Navigare */
-    .stButton > button {
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-    }
+    /* Titluri și texte standard */
+    h1, h2, h3, p, label, div { color: #333333 !important; }
     </style>
 """, unsafe_allow_html=True)
+
 
 # ==========================================
 # 2. STATE MANAGEMENT (Baza de date in RAM)
