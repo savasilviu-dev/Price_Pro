@@ -13,27 +13,39 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    /* Forțăm fundalul paginii și textul să fie cele definite de noi, ignorând Dark Mode-ul browserului */
-    .stApp { 
-        background-color: #FAFAFA !important; 
+    /* Fundalul general */
+    .stApp { background-color: #FAFAFA !important; }
+
+    /* Stilul tab-urilor */
+    [data-baseweb="tab-list"] {
+        background-color: #FAFAFA !important;
+        border-bottom: 2px solid #D11A5B !important;
+    }
+    
+    /* Textul din interiorul tab-urilor (când sunt inactive) */
+    [data-baseweb="tab"] {
+        color: #333333 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Când tab-ul este selectat */
+    [aria-selected="true"] {
+        background-color: #D11A5B !important;
+        color: white !important;
+    }
+
+    /* Textul principal și paragrafele */
+    h1, h2, h3, p, label, div, span { 
         color: #333333 !important; 
     }
-    
-    /* Asigurăm că toate containerele de text respectă tema noastră */
-    div[data-testid="stAppViewContainer"] {
-        background-color: #FAFAFA !important;
-    }
-    
+
+    /* Notele explicative */
     .explaining-note {
         background-color: #FFF2F6 !important;
         border-left: 4px solid #D11A5B !important;
         padding: 10px 14px;
         color: #333333 !important;
-        font-size: 0.85rem;
     }
-    
-    /* Titluri și texte standard */
-    h1, h2, h3, p, label, div { color: #333333 !important; }
     </style>
 """, unsafe_allow_html=True)
 
