@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import json
+import os
 
 # ==========================================
 # CONFIGURARE PAGINĂ & DESIGN ENTERPRISE
@@ -7,30 +9,23 @@ import pandas as pd
 st.set_page_config(page_title="Mentorul Financiar Pro", layout="wide", initial_sidebar_state="collapsed")
 
 TERRACOTTA = "#B05244"
+DB_FILE = "date_salon.json"
 
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #FAFAFA; color: #333333; }}
     .main-header {{ text-align: center; color: {TERRACOTTA}; font-weight: 700; font-size: 2.6rem; margin-bottom: 0px; padding-bottom: 0px; }}
     .sub-header {{ text-align: center; font-style: italic; color: #666666; font-size: 1.1rem; margin-top: 5px; margin-bottom: 30px; }}
-    
-    /* Stil Tab-uri Profesionale */
     .stTabs [data-baseweb="tab-list"] {{ background-color: transparent; border-bottom: 1px solid #E0E0E0; gap: 15px; }}
     .stTabs [data-baseweb="tab"] {{ color: #666666; font-weight: 600; font-size: 1rem; padding: 10px 5px; border: none; background-color: transparent; outline: none; }}
     .stTabs [aria-selected="true"] {{ color: {TERRACOTTA} !important; border-bottom: 3px solid {TERRACOTTA} !important; }}
-    
-    /* Casete de notificare discrete */
     .elegant-box {{ background-color: #FFFFFF; border-left: 4px solid {TERRACOTTA}; padding: 15px 20px; border-radius: 4px; box-shadow: 0px 2px 6px rgba(0,0,0,0.04); margin-bottom: 20px; font-size: 0.95rem; }}
     .alert-box {{ background-color: #FFF2F2; border-left: 4px solid #D32F2F; padding: 15px 20px; border-radius: 4px; margin-bottom: 20px; color: #D32F2F; font-weight: bold; }}
     .success-box {{ background-color: #F0FFF4; border-left: 4px solid #38A169; padding: 15px 20px; border-radius: 4px; margin-bottom: 20px; color: #276749; font-weight: bold; }}
-    
-    /* Matricea Vizuală a Camerelor */
     .salon-map-container {{ display: flex; flex-wrap: wrap; gap: 15px; margin-top: 25px; margin-bottom: 25px; }}
     .room-visual-block {{ color: #333333; padding: 20px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05), 0px 4px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }}
     .room-name-label {{ font-weight: 700; font-size: 1.1rem; margin-bottom: 5px; }}
     .room-size-label {{ font-size: 0.9rem; opacity: 0.85; font-weight: 500; }}
-    
-    /* Ascunde elementele default de UI din Streamlit pentru un aspect "App" pur */
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     </style>
@@ -40,8 +35,21 @@ st.markdown('<p class="main-header">Mentorul Financiar pentru Saloane</p>', unsa
 st.markdown('<p class="sub-header">Sistem Integrat de Audit, Configurare B2B pe MP și Gestiune Profit</p>', unsafe_allow_html=True)
 
 # ==========================================
-# STOCARE STĂRI ÎN SESIUNE (SESSION STATE)
+# MOTOR DE MEMORIE PERMANENTĂ (AUTO-SAVE)
 # ==========================================
+# 1. Încărcarea datelor la deschiderea/refresh-ul paginii
+if 'initializat' not in st.session_state:
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, 'r', encoding='utf-8') as f:
+                date_salvate = json.load(f)
+            for key, value in date_salvate.items():
+                st.session_state[key] = value
+        except:
+            pass
+    st.session_state['initializat'] = True
+
+# 2. Definire structuri lipsă (dacă e prima rulare vreodată)
 if 'fiscal' not in st.session_state: 
     st.session_state.fiscal = {
         'div': 16.0, 'imp': 1.0, 'tva': 19.0, 'regim_tva': 'Neplătitor', 
@@ -65,10 +73,10 @@ with tabs[0]:
     c1, c2 = st.columns(2)
     with c1:
         regim_tva = st.radio("Regim TVA Salon:", ["Neplătitor", "Plătitor (Adaugă TVA la raft)"], horizontal=True)
-        st.session_state.fiscal['tva'] = st.number_input("Cota TVA curentă (%):", value=19.0) if "Plătitor" in regim_tva else 0.0
+        st.session_state.fiscal['tva'] = st.number_input("Cota TVA curentă (%):", value=st.session_state.fiscal.get('tva', 19.0)) if "Plătitor" in regim_tva else 0.0
         st.session_state.fiscal['regim_tva'] = regim_tva
-        st.session_state.fiscal['imp'] = st.number_input("Impozit Firmă (Venit/Profit %):", value=1.0)
-        st.session_state.fiscal['div'] = st.number_input("Impozit Dividende în vigoare (%):", value=16.0)
+        st.session_state.fiscal['imp'] = st.number_input("Impozit Firmă (Venit/Profit %):", value=st.session_state.fiscal.get('imp', 1.0))
+        st.session_state.fiscal['div'] = st.number_input("Impozit Dividende în vigoare (%):", value=st.session_state.fiscal.get('div', 16.0))
         
     with c2:
         venit_net = st.number_input("Venit NET lunar țintă ca Administrator (RON):", value=10000.0, step=1000.0)
@@ -103,7 +111,6 @@ with tabs[1]:
         if st.button("Înregistrează Cabinet"):
             if nume_spatiu:
                 st.session_state.spatii.append({"Spațiu": nume_spatiu, "Suprafață (mp)": suprafata_spatiu})
-                st.rerun()
             
     if st.session_state.spatii:
         df_spatii = pd.DataFrame(st.session_state.spatii)
@@ -134,9 +141,9 @@ with tabs[2]:
     else:
         st.markdown("#### 1. Parametri de Funcționare (Penalizare Timp Mort)")
         t1, t2, t3 = st.columns(3)
-        st.session_state.fiscal['zile_luna'] = t1.number_input("Zile deschise / lună:", min_value=1, value=24)
-        st.session_state.fiscal['ore_zi'] = t2.number_input("Ore active / zi:", min_value=1, value=10)
-        st.session_state.fiscal['grad_ocupare'] = t3.slider("Grad Mediu de Ocupare (%) - Absoarbe timpul gol:", 10, 100, 65)
+        st.session_state.fiscal['zile_luna'] = t1.number_input("Zile deschise / lună:", min_value=1, value=st.session_state.fiscal.get('zile_luna', 24))
+        st.session_state.fiscal['ore_zi'] = t2.number_input("Ore active / zi:", min_value=1, value=st.session_state.fiscal.get('ore_zi', 10))
+        st.session_state.fiscal['grad_ocupare'] = t3.slider("Grad Mediu de Ocupare (%) - Absoarbe timpul gol:", 10, 100, st.session_state.fiscal.get('grad_ocupare', 65))
 
         st.markdown("#### 2. Cheltuieli Globale Salon")
         r1, r2, r3 = st.columns(3)
@@ -144,11 +151,11 @@ with tabs[2]:
         utilitati = r1.number_input("Utilități & Curățenie (RON/lună):", value=2500.0)
         contabilitate = r1.number_input("Contabilitate & Soft Gestiune (RON/lună):", value=1500.0)
         
-        st.session_state.fiscal['cost_marketing'] = r2.number_input("Marketing Global (Meta Ads, Content):", value=3000.0)
-        st.session_state.fiscal['cost_protocol'] = r2.number_input("Protocol Global (Cafea, Apă):", value=1000.0)
+        st.session_state.fiscal['cost_marketing'] = r2.number_input("Marketing Global (Meta Ads, Content):", value=st.session_state.fiscal.get('cost_marketing', 3000.0))
+        st.session_state.fiscal['cost_protocol'] = r2.number_input("Protocol Global (Cafea, Apă):", value=st.session_state.fiscal.get('cost_protocol', 1000.0))
         
         are_receptie = r3.checkbox("Recepție dedicată?", value=True)
-        st.session_state.fiscal['cost_receptie'] = r3.number_input("Salariu + Taxe Recepție (RON/lună):", value=4500.0) if are_receptie else 0.0
+        st.session_state.fiscal['cost_receptie'] = r3.number_input("Salariu + Taxe Recepție (RON/lună):", value=st.session_state.fiscal.get('cost_receptie', 4500.0)) if are_receptie else 0.0
         
         st.session_state.fiscal['total_regie'] = chirie_bruta + utilitati + contabilitate + st.session_state.fiscal['cost_marketing'] + st.session_state.fiscal['cost_protocol'] + st.session_state.fiscal['cost_receptie']
         cost_infrastructura_luna = chirie_bruta + utilitati + contabilitate
@@ -207,9 +214,12 @@ with tabs[3]:
                     "Denumire": n_item, "Valoare (RON)": v_item,
                     "Amortizare/Lună (RON)": round(amortizare_luna, 2), "Spațiu Arondat": room_assigned
                 })
-                st.rerun()
                 
-        if st.session_state.inventar: st.dataframe(pd.DataFrame(st.session_state.inventar), use_container_width=True)
+        if st.session_state.inventar: 
+            st.dataframe(pd.DataFrame(st.session_state.inventar), use_container_width=True)
+            if st.button("🧹 Șterge tot inventarul"):
+                st.session_state.inventar = []
+                st.rerun()
 
 # ------------------------------------------
 # TAB 5: BAZĂ DATE PRODUSE
@@ -224,8 +234,12 @@ with tabs[4]:
     if st.button("Salvează în stoc"):
         pret_unitar = p_lot / cant if cant > 0 else 0
         st.session_state.produse.append({"Produs": n_prod, "Preț/UM (RON)": round(pret_unitar, 4)})
-        st.rerun()
-    if st.session_state.produse: st.dataframe(pd.DataFrame(st.session_state.produse), use_container_width=True)
+        
+    if st.session_state.produse: 
+        st.dataframe(pd.DataFrame(st.session_state.produse), use_container_width=True)
+        if st.button("🧹 Șterge toate produsele"):
+            st.session_state.produse = []
+            st.rerun()
 
 # ------------------------------------------
 # TAB 6: DEVIZ (REȚETAR)
@@ -263,10 +277,8 @@ with tabs[5]:
         pret_simulat_net = st.number_input("💰 Preț propus de vânzare (fără TVA) - RON:", value=250.0)
         
         if st.button("Evaluează Structura de Preț"):
-            # 1. Calcul Productivitate Reală pentru Cameră (Penalizare Timp Mort)
             minute_productive_luna = st.session_state.fiscal['zile_luna'] * st.session_state.fiscal['ore_zi'] * 60 * (st.session_state.fiscal['grad_ocupare'] / 100.0)
             
-            # 2. Distribuția Regiei Totale a Salonului pe Camera Selectată (în funcție de % mp)
             suprafata_camerei = next(s["Suprafață (mp)"] for s in st.session_state.spatii if s["Spațiu"] == room_selected)
             pondere_camera = suprafata_camerei / st.session_state.fiscal['suprafata_totala']
             
@@ -274,7 +286,6 @@ with tabs[5]:
             cost_regie_minut = cost_regie_luna_camera / minute_productive_luna if minute_productive_luna > 0 else 0
             cost_regie_absorbita = t_camera * cost_regie_minut
             
-            # 3. Amortizare CAPEX Cameră
             c_uzura_luna = sum(i["Amortizare/Lună (RON)"] for i in st.session_state.inventar if i.get("Spațiu Arondat") == room_selected)
             cost_uzura_minut = c_uzura_luna / minute_productive_luna if minute_productive_luna > 0 else 0
             cost_capex_absorbit = t_efectiv * cost_uzura_minut
@@ -282,13 +293,12 @@ with tabs[5]:
             cost_infrastructura = cost_regie_absorbita + cost_capex_absorbit + cost_mat_final
             tech_info = next(t for t in st.session_state.echipa if t["Nume"] == tech_selectat)
             
-            # 4. Modele Financiare CIM vs B2B
             if tech_info["Tip"] == "CIM":
                 cost_manopera_fixa = t_efectiv * tech_info.get("Cost_Min", 0)
                 break_even = cost_infrastructura + cost_manopera_fixa
                 profit_operational = pret_simulat_net - break_even
                 plata_tehnician = cost_manopera_fixa
-            else: # B2B pe Profit
+            else: 
                 break_even = cost_infrastructura
                 profit_brut_pre_colaborare = pret_simulat_net - break_even
                 
@@ -315,6 +325,13 @@ with tabs[5]:
             st.write(f"💎 **PROFIT NET SALON CONSOLIDAT: {profit_net_firma:.2f} RON**")
             
             st.session_state.catalog.append({"Nume": nume_serv, "Preț Bază": pret_simulat_net, "Break-Even": round(break_even, 2), "Profit Net": round(profit_net_firma, 2)})
+
+        if st.session_state.catalog:
+            st.markdown("#### Baza de Date Servicii (Catalog)")
+            st.dataframe(pd.DataFrame(st.session_state.catalog), use_container_width=True)
+            if st.button("🧹 Șterge tot catalogul"):
+                st.session_state.catalog = []
+                st.rerun()
 
 # ------------------------------------------
 # TAB 7: OFERTE & PACHETE
@@ -344,3 +361,20 @@ with tabs[6]:
                 st.markdown(f'<div class="alert-box">🛑 STRATEGIE TOXICĂ! Pierzi {- (pret_oferta - be_pachet_total):.2f} RON la fiecare pachet vândut.</div>', unsafe_allow_html=True)
             else:
                 st.markdown(f'<div class="success-box">💎 PROMOȚIE SIGURĂ: Profit curat estimat de {pret_oferta - be_pachet_total:.2f} RON / pachet.</div>', unsafe_allow_html=True)
+
+# ==========================================
+# EXECUTARE SALVARE AUTOMATĂ
+# ==========================================
+date_export = {
+    'fiscal': st.session_state.fiscal,
+    'spatii': st.session_state.spatii,
+    'echipa': st.session_state.echipa,
+    'inventar': st.session_state.inventar,
+    'produse': st.session_state.produse,
+    'catalog': st.session_state.catalog
+}
+try:
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(date_export, f, ensure_ascii=False, indent=4)
+except Exception:
+    pass
